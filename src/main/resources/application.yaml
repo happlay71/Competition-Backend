@@ -1,0 +1,59 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+    session:
+      timeout: PT60M  # 过期时间 60M 一个小时
+
+spring:
+  profiles:
+    active: dev
+  datasource:
+    url: jdbc:mysql://${jingsai.db.host}:3306/jingsai?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&serverTimezone=Asia/Shanghai
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: ${jingsai.db.pw}
+  mvc:
+    throw-exception-if-no-handler-found: true  # 错误页处理
+    path match:
+      # 兼容swagger
+      matching-strategy: ant_path_matcher
+  web:
+    resources:
+      add-mappings: false
+
+
+mybatis-plus:
+  configuration:
+    default-enum-type-handler: com.baomidou.mybatisplus.core.handlers.MybatisEnumTypeHandler
+  global-config:
+    db-config:
+      update-strategy: not_null
+      id-type: auto
+  plugin:
+    com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor:
+        interceptors:
+          com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor:
+              db-type: mysql
+
+
+
+logging:
+  level:
+    root: debug
+
+knife4j:
+  enable: true
+  openapi:
+    title: 竞赛获奖
+    description: "竞赛获奖文档"
+    email: 1633433173@qq.com
+    concat: happlay71
+    url: https://happlay.online
+    version: v1.0.0
+    group:
+      default:
+        group-name: default
+        api-rule: package
+        api-rule-resources:
+          - online.happlay.jingsai.controller
