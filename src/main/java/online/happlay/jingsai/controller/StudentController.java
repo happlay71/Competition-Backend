@@ -19,6 +19,7 @@ import online.happlay.jingsai.model.vo.PaginationResultVO;
 import online.happlay.jingsai.model.vo.StudentVO;
 import online.happlay.jingsai.service.IStudentService;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -94,5 +95,17 @@ public class StudentController {
         ThrowUtils.throwIf(id == null, ErrorCode.PARAMS_ERROR, "学生ID不存在");
         studentService.deleteStudent(id, request);
         return ResultUtils.success("学生信息删除成功");
+    }
+
+    @PostMapping("/importExcel")
+    @AuthCheck(mustRole = "admin")
+    @ApiOperation(value = "Excel批量导入学生信息")
+    public BaseResponse<String> importStudentByExcel(@RequestParam("file") MultipartFile file, HttpServletRequest request) {
+        ThrowUtils.throwIf(file == null, ErrorCode.PARAMS_ERROR, "文件不能为空");
+        ThrowUtils.throwIf(!file.getOriginalFilename().endsWith(".xlsx") && !file.getOriginalFilename().endsWith(".xls"),
+                ErrorCode.PARAMS_ERROR, "文件格式错误，只支持.xlsx和.xls格式");
+
+        studentService.importStudentByExcel(file, request);
+        return ResultUtils.success("导入成功");
     }
 }

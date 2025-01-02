@@ -1,8 +1,13 @@
 package online.happlay.jingsai.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import com.alibaba.excel.EasyExcel;
+import com.alibaba.excel.context.AnalysisContext;
+import com.alibaba.excel.event.AnalysisEventListener;
+import com.alibaba.excel.exception.ExcelAnalysisException;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import online.happlay.jingsai.common.ErrorCode;
@@ -12,18 +17,24 @@ import online.happlay.jingsai.model.dto.StudentDTO;
 import online.happlay.jingsai.model.dto.StudentSaveDTO;
 import online.happlay.jingsai.model.entity.*;
 import online.happlay.jingsai.mapper.StudentMapper;
+import online.happlay.jingsai.model.excel.StudentExcel;
 import online.happlay.jingsai.model.query.StudentQuery;
 import online.happlay.jingsai.model.vo.PaginationResultVO;
 import online.happlay.jingsai.model.vo.StudentVO;
 import online.happlay.jingsai.service.*;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import online.happlay.jingsai.utils.JwtUtils;
+import org.springframework.beans.BeanUtils;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -54,6 +65,8 @@ public class StudentServiceImpl extends ServiceImpl<StudentMapper, Student> impl
     @Lazy
     @Resource
     private IStudentAwardService studentAwardService;
+
+    private final StudentMapper baseMapper;
 
     @Override
     public void verify(StudentDTO studentDTO, HttpServletRequest request) {
@@ -316,6 +329,116 @@ public class StudentServiceImpl extends ServiceImpl<StudentMapper, Student> impl
 
         // 4. 执行删除操作，删除学生信息
         this.removeById(id);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void importStudentByExcel(MultipartFile file, HttpServletRequest request) {
+        try {
+            // 读取 Excel 文件
+            EasyExcel.read(file.getInputStream(), StudentExcel.class, new AnalysisEventListener<StudentExcel>() {
+                private List<Student> studentList = new ArrayList<>();
+
+                @Override
+                public void invoke(StudentExcel studentExcel, AnalysisContext context) {
+                    try {
+                        // 数据校验和转换
+                        validateStudent(studentExcel);
+
+                        // 转换为 Student 实体
+                        Student student = new Student();
+                        BeanUtils.copyProperties(studentExcel, student);
+
+                        // 根据专业名称查找专业ID
+                        Major major = majorService.getOne(new LambdaQueryWrapper<Major>().eq(Major::getName, studentExcel.getProfession()));
+                        if (major != null) {
+                            student.setProfession(major.getId());
+                        } else {
+                            throw new BusinessException(ErrorCode.PARAMS_ERROR, "专业不存在");
+                        }
+
+                        studentList.add(student);
+
+                        // 达到一定数量批量插入
+                        if (studentList.size() >= 100) {
+                            saveStudentBatch(studentList);
+                            studentList.clear();
+                        }
+                    } catch (Exception e) {
+                        // 捕获异常并记录日志，便于排查问题
+                        System.err.println("导入学生信息时发生错误: " + e.getMessage());
+                        e.printStackTrace(); // 打印完整堆栈信息
+                    }
+                }
+
+                @Override
+                public void doAfterAllAnalysed(AnalysisContext context) {
+                    try {
+                        // 处理剩余数据
+                        if (!studentList.isEmpty()) {
+                            saveStudentBatch(studentList);
+                        }
+                    } catch (Exception e) {
+                        System.err.println("批量保存剩余学生信息时发生错误: " + e.getMessage());
+                        e.printStackTrace(); // 打印完整堆栈信息
+                    }
+                }
+            }).sheet().doRead(); // 执行 Excel 解析
+
+        } catch (IOException e) {
+            // 读取文件异常
+            System.err.println("读取文件时发生错误: " + e.getMessage());
+            e.printStackTrace();
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "Excel文件读取失败");
+        } catch (Exception e) {
+            // 捕获其他未知异常
+            System.err.println("导入过程中发生未知错误: " + e.getMessage());
+            e.printStackTrace();
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "导入过程中发生未知错误");
+        }
+    }
+
+
+
+    /**
+     * 批量保存学生信息
+     */
+    private void saveStudentBatch(List<Student> studentList) {
+        baseMapper.insertBatch(studentList);
+    }
+
+    /**
+     * 验证学生信息
+     */
+    private void validateStudent(StudentExcel studentExcel) {
+        // 1. 必填字段校验
+        ThrowUtils.throwIf(StringUtils.isBlank(studentExcel.getStudentId()),
+                ErrorCode.PARAMS_ERROR, "学号不能为空");
+        ThrowUtils.throwIf(StringUtils.isBlank(studentExcel.getName()),
+                ErrorCode.PARAMS_ERROR, "姓名不能为空");
+        ThrowUtils.throwIf(StringUtils.isBlank(studentExcel.getProfession()),
+                ErrorCode.PARAMS_ERROR, "专业不能为空");
+        ThrowUtils.throwIf(StringUtils.isBlank(studentExcel.getEmail()),
+                ErrorCode.PARAMS_ERROR, "邮箱不能为空");
+        ThrowUtils.throwIf(StringUtils.isBlank(studentExcel.getPhone()),
+                ErrorCode.PARAMS_ERROR, "电话不能为空");
+
+        // 2. 格式校验
+        String studentId = studentExcel.getStudentId();
+        ThrowUtils.throwIf(!studentId.matches("^\\d{7,12}$"),
+                ErrorCode.PARAMS_ERROR, "学号格式错误");
+
+        String email = studentExcel.getEmail();
+        ThrowUtils.throwIf(!email.matches("^[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)+$"),
+                ErrorCode.PARAMS_ERROR, "邮箱格式错误");
+
+        String phone = studentExcel.getPhone();
+        ThrowUtils.throwIf(!phone.matches("^1[3-9]\\d{9}$"),
+                ErrorCode.PARAMS_ERROR, "手机号格式错误");
+
+        // 3. 重复校验
+        ThrowUtils.throwIf(baseMapper.existsByStudentId(studentId),
+                ErrorCode.PARAMS_ERROR, "学号已存在");
     }
 
 

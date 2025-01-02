@@ -1,5 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="online.happlay.jingsai.mapper.StudentMapper">
+    <!-- 批量插入学生信息 -->
+    <insert id="insertBatch">
+        insert into student (student_id, name, grade, profession, gender, email, phone)
+        values
+        <foreach collection="list" item="item" index="index" separator=",">
+            (#{item.studentId}, #{item.name}, #{item.grade}, #{item.profession}, #{item.gender}, #{item.email}, #{item.phone})
+        </foreach>
+    </insert>
 
+    <!-- 根据学号判断是否存在 -->
+    <select id="existsByStudentId" resultType="boolean">
+        select count(1) from student
+        where student_id = #{studentId}
+    </select>
 </mapper>

@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import online.happlay.jingsai.model.query.StudentQuery;
 import online.happlay.jingsai.model.vo.PaginationResultVO;
 import online.happlay.jingsai.model.vo.StudentVO;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -31,4 +32,6 @@ public interface IStudentService extends IService<Student> {
     void status(Long id, Integer status, HttpServletRequest request);
 
     void deleteStudent(Integer id, HttpServletRequest request);
+
+    void importStudentByExcel(MultipartFile file, HttpServletRequest request);
 }
