@@ -15,8 +15,8 @@ public class JwtUtils {
 
     public String createToken(String userId, String userRole) {
         return JWT.create()
-                .setPayload("userId", userId)
-                .setPayload("userRole", userRole)
+                .setPayload("id", userId)
+                .setPayload("role", userRole)
                 .setSigner(JWTSignerUtil.none())
                 .sign();
     }
@@ -25,14 +25,14 @@ public class JwtUtils {
         String token = request.getHeader("token");
         verifyToken(token);
         JWT jwt = JWT.of(token);
-        return (String) jwt.getPayload("userId");
+        return (String) jwt.getPayload("id");
     }
 
     public String getUserRole(HttpServletRequest request) {
         String token = request.getHeader("token");
         verifyToken(token);
         JWT jwt = JWT.of(token);
-        return (String) jwt.getPayload("userRole");
+        return (String) jwt.getPayload("role");
     }
 
     public void verifyToken(String token) {
