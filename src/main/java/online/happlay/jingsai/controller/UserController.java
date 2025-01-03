@@ -56,6 +56,7 @@ public class UserController {
     }
 
     @PostMapping("/login")
+    @AuthCheck(checkLogin = false)
     @ApiOperation(value = "用户登录")
     public BaseResponse<LoginUserVO> login(@RequestBody LoginUserDTO loginUserDTO) {
         ThrowUtils.throwIf(loginUserDTO == null, ErrorCode.NOT_FOUND_ERROR);

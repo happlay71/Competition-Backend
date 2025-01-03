@@ -12,6 +12,7 @@ public enum ErrorCode {
     NOT_FOUND_ERROR(404, "请求数据不存在"),
     FORBIDDEN_ERROR(403, "禁止访问"),
     USER_ALREADY_EXISTS(409, "用户已存在"),
+    USER_DISABLE_DELETE(408, "用户被禁用或删除"),
     SYSTEM_ERROR(500, "系统内部异常"),
     TOKEN_ERROR(501, "Token解析失败"),
     OPERATION_ERROR(50001, "操作失败");

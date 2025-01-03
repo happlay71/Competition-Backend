@@ -26,6 +26,8 @@ public interface IUserService extends IService<User> {
 
     boolean checkLoginUserById(String userId);
 
+    boolean checkUserStatusById(String userId);
+
     PaginationResultVO<UserVO> selectUser(UserQuery userQuery, HttpServletRequest request);
 
     void savePassword(PasswordDTO passwordDTO, HttpServletRequest request);

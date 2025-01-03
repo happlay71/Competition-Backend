@@ -30,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -67,12 +68,17 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 
     @Override
     public LoginUserVO login(LoginUserDTO loginUserDTO) {
+
         LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(User::getUserAccount, loginUserDTO.getUserAccount());
         User user = this.getOne(queryWrapper);
 
         ThrowUtils.throwIf(user == null, ErrorCode.NOT_FOUND_ERROR);
         ThrowUtils.throwIf(!stringUtils.matches(loginUserDTO.getPassword(), user.getPassword()), ErrorCode.PARAMS_ERROR, "密码错误");
+
+        boolean statusById = checkUserStatusById(String.valueOf(user.getId()));
+        ThrowUtils.throwIf(statusById, ErrorCode.USER_DISABLE_DELETE);
+
         LoginUserVO userVO = BeanUtil.copyProperties(user, LoginUserVO.class);
         String token = jwtUtils.createToken(String.valueOf(user.getId()), user.getRole());
         userVO.setToken(token);
@@ -84,6 +90,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         Long id = Long.valueOf(userId);
         User user = this.getById(id);
         return user == null;
+    }
+
+    @Override
+    public boolean checkUserStatusById(String userId) {
+        Long id = Long.valueOf(userId);
+        User user = this.getById(id);
+        ThrowUtils.throwIf(user == null, ErrorCode.NOT_FOUND_ERROR, "用户信息不存在");
+
+        return Objects.equals(user.getStatus(), UserStatusEnum.DISABLE.getStatus()) || user.getIsDelete().equals(1);
     }
 
     @Override

@@ -41,6 +41,9 @@ public class AuthInterceptor {
         if (authCheck.checkLogin() || StrUtil.isNotBlank(mustRole)) {
             String userId = jwtUtils.getUserId(request);
             ThrowUtils.throwIf(userService.checkLoginUserById(userId), ErrorCode.NOT_LOGIN_ERROR);
+            // 用户必须是启用状态且没有被删除
+            ThrowUtils.throwIf(userService.checkUserStatusById(userId), ErrorCode.USER_DISABLE_DELETE);
+
         }
         // 必须有该权限才能通过
         if (StrUtil.isNotBlank(mustRole)) {
