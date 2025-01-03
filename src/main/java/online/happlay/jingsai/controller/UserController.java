@@ -8,6 +8,7 @@ import online.happlay.jingsai.annotation.AuthCheck;
 import online.happlay.jingsai.common.BaseResponse;
 import online.happlay.jingsai.common.ErrorCode;
 import online.happlay.jingsai.common.ResultUtils;
+import online.happlay.jingsai.exception.BusinessException;
 import online.happlay.jingsai.exception.ThrowUtils;
 import online.happlay.jingsai.model.dto.*;
 import online.happlay.jingsai.model.query.AwardQuery;
@@ -17,10 +18,15 @@ import online.happlay.jingsai.model.vo.LoginUserVO;
 import online.happlay.jingsai.model.vo.PaginationResultVO;
 import online.happlay.jingsai.model.vo.UserVO;
 import online.happlay.jingsai.service.IUserService;
+import online.happlay.jingsai.utils.JwtUtils;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import sun.security.util.Password;
 
+import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * <p>
@@ -37,6 +43,9 @@ import javax.servlet.http.HttpServletRequest;
 public class UserController {
 
     private final IUserService userService;
+
+    @Resource
+    private JwtUtils jwtUtils;
 
     @PostMapping("/register")
     @ApiOperation(value = "用户注册")

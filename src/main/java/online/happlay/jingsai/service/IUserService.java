@@ -37,4 +37,5 @@ public interface IUserService extends IService<User> {
     void deleteUser(Integer id, HttpServletRequest request);
 
     void updatePassword(UpPWDTO upPWDTO, HttpServletRequest request);
+
 }
