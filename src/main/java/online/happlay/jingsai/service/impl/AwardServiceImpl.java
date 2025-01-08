@@ -80,6 +80,13 @@ public class AwardServiceImpl extends ServiceImpl<AwardMapper, Award> implements
         // 判断是否为管理员
         boolean isAdmin = "ADMIN".equalsIgnoreCase(currentUserRole);
 
+        // 判断当前用户是否进行学生认证
+        LambdaQueryWrapper<Student> query = new LambdaQueryWrapper<>();
+        query.eq(Student::getUserId, Long.valueOf(currentUserId));
+        if (studentService.getOne(query) == null) {
+            throw new BusinessException(ErrorCode.FORBIDDEN_ERROR, "请先完成学生认证");
+        }
+
         // 如果不是管理员，校验申请ID是否是当前用户
         if (!isAdmin && !currentUserId.equals(String.valueOf(awardDTO.getApplicant()))) {
             throw new BusinessException(ErrorCode.FORBIDDEN_ERROR, "无权限操作");
@@ -353,6 +360,24 @@ public class AwardServiceImpl extends ServiceImpl<AwardMapper, Award> implements
                     .map(competitionLevel -> competitionLevel.getId().longValue())
                     .collect(Collectors.toList());
             queryWrapper.in(Award::getCompetitionLevel, competitionLevelIds);
+        }
+
+        // 如果有学生姓名，根据学生姓名查询所有对应ID
+        if (StrUtil.isNotBlank(awardQuery.getStudentName())) {
+            LambdaQueryWrapper<Student> studentQuery = new LambdaQueryWrapper<>();
+            studentQuery.like(Student::getName, awardQuery.getStudentName());
+            List<Student> students = studentService.list(studentQuery);
+
+            // 如果没有匹配的竞赛级别信息，直接返回空结果
+            if (students.isEmpty()) {
+                return PaginationResultVO.emptyResult(new BaseQuery());
+            }
+
+            // 提取竞赛级别ID列表并加入查询条件
+            List<Long> studentIds = students.stream()
+                    .map(Student::getId)
+                    .collect(Collectors.toList());
+            queryWrapper.in(Award::getFirstPlaceStudentId, studentIds);
         }
 
         // 进行分页查询

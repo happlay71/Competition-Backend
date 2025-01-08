@@ -70,6 +70,12 @@ public class StudentServiceImpl extends ServiceImpl<StudentMapper, Student> impl
 
     @Override
     public void verify(StudentDTO studentDTO, HttpServletRequest request) {
+        // 查询该用户是否验证过
+        String userId = jwtUtils.getUserId(request);
+        Student isStudent = this.getOne(new LambdaQueryWrapper<Student>()
+                .eq(Student::getUserId, Long.valueOf(userId)));
+        ThrowUtils.throwIf(isStudent != null, ErrorCode.PARAMS_ERROR, "用户已认证");
+
         // 1. 校验学生信息是否合法（例如：学号是否存在，姓名和邮箱是否匹配等）
         ThrowUtils.throwIf(studentDTO.getStudentId() == null || studentDTO.getStudentId().isEmpty(),
                 ErrorCode.PARAMS_ERROR, "学生学号不能为空");
@@ -79,16 +85,15 @@ public class StudentServiceImpl extends ServiceImpl<StudentMapper, Student> impl
         queryWrapper.eq(Student::getStudentId, studentDTO.getStudentId());
         Student student = this.getOne(queryWrapper);
         ThrowUtils.throwIf(student == null, ErrorCode.NOT_FOUND_ERROR, "未找到该学生");
+        ThrowUtils.throwIf(student.getUserId() != null, ErrorCode.PARAMS_ERROR, "该学生已被认证");
 
         // 3. 验证学生提供的信息与数据库中存储的信息是否一致
         ThrowUtils.throwIf(!student.getName().equals(studentDTO.getName()), ErrorCode.PARAMS_ERROR, "学生姓名不匹配");
         ThrowUtils.throwIf(!student.getEmail().equals(studentDTO.getEmail()), ErrorCode.PARAMS_ERROR, "学生邮箱不匹配");
 
-        // 4. 如果学生信息验证通过，进行用户关联（如果有）
-        if (student.getUserId() == null) {
-            student.setUserId(studentDTO.getId());
-            this.updateById(student);
-        }
+        // 4. 如果学生信息验证通过，进行用户关联
+        student.setUserId(studentDTO.getId());
+        this.updateById(student);
     }
 
     @Override
