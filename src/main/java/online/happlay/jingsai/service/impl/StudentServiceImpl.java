@@ -184,8 +184,9 @@ public class StudentServiceImpl extends ServiceImpl<StudentMapper, Student> impl
         // 判断是否为管理员
         boolean isAdmin = "ADMIN".equalsIgnoreCase(currentUserRole);
 
-        // 如果不是管理员
-        if (!isAdmin) {
+        // 如果不是管理员且修改的不是自己的信息
+        String userId = jwtUtils.getUserId(request);
+        if (!isAdmin || !studentSaveDTO.getId().equals(Long.valueOf(userId))) {
             throw new BusinessException(ErrorCode.FORBIDDEN_ERROR, "无权限操作");
         }
 
